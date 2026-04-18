@@ -25,6 +25,7 @@
     "dev:backend": "rm -rf apps/backend/dist && pnpm --filter ./apps/backend run dev",
     "dev:frontend": "rm -rf apps/frontend/dist && pnpm --filter ./apps/frontend run dev",
     "dev:orchestrator": "rm -rf apps/orchestrator/dist && pnpm --filter ./apps/orchestrator run dev",
+    "start:prod": "node --experimental-require-module apps/backend/dist/apps/backend/src/main.js",
     "start:prod:orchestrator": "pnpm --filter ./apps/orchestrator run start",
     "start:prod:backend": "pnpm --filter ./apps/backend run start",
     "start:prod:frontend": "pnpm --filter ./apps/frontend run start",
