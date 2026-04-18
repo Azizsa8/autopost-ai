@@ -9,6 +9,8 @@
     "spec": false
   },
   "compilerOptions": {
+    "builder": "swc",
+    "typeCheck": false,
     "manualRestart": true,
     "tsConfigPath": "./tsconfig.build.json",
     "webpack": false,
