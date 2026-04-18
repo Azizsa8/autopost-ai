@@ -1,15 +1,14 @@
 [phases.setup]
-nixPkgs = ["nodejs_22", "nodePackages.pnpm", "python3", "gcc", "gnumake"]
+nixPkgs = ["nodejs_22", "python3", "gcc", "gnumake"]
 
 [phases.install]
 cmds = [
-  "pnpm install --frozen-lockfile"
+  "corepack enable && corepack prepare pnpm@10.6.1 --activate && pnpm install --frozen-lockfile"
 ]
 
 [phases.build]
 cmds = [
-  "pnpm dlx prisma@6.5.0 generate --schema libraries/nestjs-libraries/src/database/prisma/schema.prisma",
-  "pnpm run build"
+  "pnpm dlx prisma@6.5.0 generate --schema libraries/nestjs-libraries/src/database/prisma/schema.prisma && pnpm run build"
 ]
 
 [start]
