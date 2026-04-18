@@ -3,6 +3,15 @@ import { Controller, Get } from '@nestjs/common';
 export class RootController {
   @Get('/')
   getRoot(): string {
-    return 'App is running!';
+    return 'AutoPost AI API is running!';
+  }
+
+  @Get('/health')
+  getHealth() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    };
   }
 }

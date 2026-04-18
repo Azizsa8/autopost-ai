@@ -43,6 +43,7 @@ model Organization {
   webhooks            Webhooks[]
   oauthApp            OAuthApp[]
   oauthAuthorizations OAuthAuthorization[]
+  brandVoice          BrandVoice?
 
   @@index([apiKey])
   @@index([streakSince])
@@ -281,21 +282,49 @@ model Credits {
 }
 
 model Subscription {
-  id               String           @id @default(cuid())
-  organizationId   String           @unique
-  subscriptionTier SubscriptionTier
-  identifier       String?
-  cancelAt         DateTime?
-  period           Period
-  totalChannels    Int
-  isLifetime       Boolean          @default(false)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  deletedAt        DateTime?
-  organization     Organization     @relation(fields: [organizationId], references: [id])
+  id                String    @id @default(uuid())
+  organizationId    String    @unique
+  plan              String    // starter | growth | business | agency
+  status            String    // active | cancelled | past_due | trialing
+  moyasarId         String?   // Moyasar subscription/invoice ID
+  currentPeriodEnd  DateTime?
+  maxProfiles       Int       @default(2)
+  maxPostsPerDay    Int       @default(1)
+  trialEndsAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  organization      Organization @relation(fields: [organizationId], references: [id])
+}
 
-  @@index([organizationId])
-  @@index([deletedAt])
+model BrandVoice {
+  id                String    @id @default(uuid())
+  organizationId    String    @unique
+  brandName         String
+  industry          String
+  tone              String    // professional | friendly | luxury | playful
+  language          String    // ar | en | both
+  arabicExamples    String?   // sample Arabic posts for few-shot prompting
+  englishExamples   String?   // sample English posts for few-shot prompting
+  competitors       String?   // comma-separated competitor names
+  keywords          String?   // brand keywords
+  avoidWords        String?   // words to never use
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  organization      Organization @relation(fields: [organizationId], references: [id])
+}
+
+model AiGenerationLog {
+  id                String    @id @default(uuid())
+  organizationId    String
+  postId            String?
+  model             String
+  platform          String
+  language          String
+  promptTokens      Int?
+  completionTokens  Int?
+  success           Boolean
+  errorMessage      String?
+  createdAt         DateTime  @default(now())
 }
 
 model Customer {

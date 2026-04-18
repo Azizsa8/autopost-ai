@@ -43,6 +43,30 @@ export class IntegrationsController {
     private _refreshIntegrationService: RefreshIntegrationService
   ) {}
 
+  @Get('/')
+  async getIntegrations() {
+    return {
+      social: this._integrationManager.getAllowedSocialsIntegrations().map((identifier) => {
+        const integration = this._integrationManager.getSocialIntegration(identifier);
+        return {
+          identifier,
+          name: integration.name,
+          isExternal: !!integration.externalUrl,
+          isWeb3: identifier === 'farcaster', // farcaster is web3 in this app
+          isChromeExtension: integration.isChromeExtension,
+          customFields: integration.customFields ? integration.customFields : undefined,
+        };
+      }),
+      article: this._integrationManager.getAllowedArticlesIntegrations().map((identifier) => {
+        const integration = this._integrationManager.getSocialIntegration(identifier);
+        return {
+          identifier,
+          name: integration.name,
+        };
+      }),
+    };
+  }
+
   @Post('/provider/:id/connect')
   @CheckPolicies([AuthorizationActions.Create, Sections.CHANNEL])
   async saveProviderPage(

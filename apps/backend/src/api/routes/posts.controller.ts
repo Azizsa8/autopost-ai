@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
 import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
@@ -28,9 +29,11 @@ import {
   AuthorizationActions,
   Sections,
 } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
+import { SubscriptionGuard } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.guard';
 
 @ApiTags('Posts')
 @Controller('/posts')
+@UseGuards(SubscriptionGuard)
 export class PostsController {
   constructor(
     private _postsService: PostsService,

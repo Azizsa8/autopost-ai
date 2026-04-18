@@ -525,6 +525,9 @@ export const EditorWrapper: FC<{
   );
 };
 
+import { AiGenerateModal } from '@gitroom/frontend/components/new-launch/ai.generate.modal';
+import { useModals } from '@gitroom/frontend/components/layout/new-modal';
+
 export const Editor: FC<{
   editorType?: 'none' | 'normal' | 'markdown' | 'html';
   totalPosts: number;
@@ -564,6 +567,34 @@ export const Editor: FC<{
   const toaster = useToaster();
   const editorRef = useRef<undefined | { editor: any }>(undefined);
   const [loading, setLoading] = useState(false);
+  const modals = useModals();
+
+  const openAiModal = useCallback(() => {
+    modals.openModal({
+      title: t('generate_with_ai', 'Generate with AI'),
+      children: (
+        <AiGenerateModal
+          platform={identifier || 'Instagram'}
+          onGenerate={({ caption, imageUrl }) => {
+            editorRef.current?.editor?.commands.setContent(
+              caption
+                .split('\n')
+                .map((line) => `<p>${line}</p>`)
+                .join('')
+            );
+            if (imageUrl && appendImages) {
+              appendImages([
+                {
+                  id: makeId(10),
+                  path: imageUrl,
+                },
+              ]);
+            }
+          }}
+        />
+      ),
+    });
+  }, [identifier, appendImages]);
 
   const uppy = useUppyUploader({
     onUploadSuccess: (result: any) => {
@@ -776,6 +807,14 @@ export const Editor: FC<{
                   }
                   toolBar={
                     <div className="flex gap-[5px]">
+                      <div
+                        data-tooltip-id="tooltip"
+                        data-tooltip-content={t('generate_with_ai', 'Generate with AI')}
+                        className="select-none cursor-pointer rounded-[6px] px-[8px] h-[30px] bg-ai flex justify-center items-center gap-[4px] text-white text-[12px] font-bold"
+                        onClick={openAiModal}
+                      >
+                        ✨ {t('generate', 'Generate')}
+                      </div>
                       <SignatureBox editor={editorRef?.current?.editor} />
                       {editorType !== 'none' && (
                         <>

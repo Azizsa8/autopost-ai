@@ -120,4 +120,20 @@ export class CreatePostDto {
   @ValidateNested({ each: true })
   @ArrayMinSize(1)
   posts: Post[];
+
+  @IsOptional()
+  @IsBoolean()
+  aiGenerate?: boolean;
+
+  @IsOptional()
+  @IsString()
+  aiTopic?: string;
+
+  @IsOptional()
+  @IsIn(['ar', 'en', 'both'])
+  aiLanguage?: 'ar' | 'en' | 'both';
+
+  @IsOptional()
+  @IsBoolean()
+  aiGenerateImage?: boolean;
 }

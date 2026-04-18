@@ -37,6 +37,8 @@ import { timer } from '@gitroom/helpers/utils/timer';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
 import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abstract';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
+import { AiContentService } from '@gitroom/nestjs-libraries/ai-content/ai-content.service';
+import { BrandVoiceService } from '@gitroom/nestjs-libraries/brand-voice/brand-voice.service';
 
 type PostWithConditionals = Post & {
   integration?: Integration;
@@ -54,7 +56,9 @@ export class PostsService {
     private _shortLinkService: ShortLinkService,
     private _openaiService: OpenaiService,
     private _temporalService: TemporalService,
-    private _refreshIntegrationService: RefreshIntegrationService
+    private _refreshIntegrationService: RefreshIntegrationService,
+    private _aiContentService: AiContentService,
+    private _brandVoiceService: BrandVoiceService
   ) {}
 
   searchForMissingThreeHoursPosts() {
@@ -732,6 +736,86 @@ export class PostsService {
   }
 
   async createPost(orgId: string, body: CreatePostDto): Promise<any[]> {
+    if (body.aiGenerate) {
+      const brandVoice = await this._brandVoiceService.getBrandVoice(orgId);
+      if (!brandVoice) {
+        throw new BadRequestException(
+          'Brand voice not set up. Please complete onboarding.'
+        );
+      }
+
+      for (const post of body.posts) {
+        const integration = await this._integrationService.getIntegrationById(
+          orgId,
+          post.integration.id
+        );
+        const platform = integration.providerIdentifier;
+
+        const aiResult = await this._aiContentService.generateCaption({
+          organizationId: orgId,
+          platform,
+          topic: body.aiTopic,
+          brandVoice,
+          language: body.aiLanguage || 'both',
+        });
+
+        const moderationAr = aiResult.captionAr
+          ? await this._aiContentService.moderateContent({
+              organizationId: orgId,
+              caption: aiResult.captionAr,
+              platform,
+            })
+          : { safe: true };
+
+        const moderationEn = aiResult.captionEn
+          ? await this._aiContentService.moderateContent({
+              organizationId: orgId,
+              caption: aiResult.captionEn,
+              platform,
+            })
+          : { safe: true };
+
+        if (!moderationAr.safe || !moderationEn.safe) {
+          throw new BadRequestException(
+            `AI generated content was flagged as unsafe: ${
+              moderationAr.reason || moderationEn.reason
+            }`
+          );
+        }
+
+        const caption =
+          body.aiLanguage === 'ar'
+            ? aiResult.captionAr
+            : body.aiLanguage === 'en'
+            ? aiResult.captionEn
+            : `${aiResult.captionAr}\n\n${aiResult.captionEn}`;
+
+        const hashtags = (aiResult.hashtags || []).join(' ');
+
+        post.value = [
+          {
+            id: '',
+            content: `${caption}\n\n${hashtags}`,
+            delay: 0,
+            image: [],
+          },
+        ];
+
+        if (body.aiGenerateImage) {
+          const imageUrl = await this._aiContentService.generateImage({
+            organizationId: orgId,
+            prompt: aiResult.suggestedImagePrompt,
+            platform,
+          });
+          if (imageUrl) {
+            // In a real scenario, we'd download and save this image via MediaService.
+            // For now, we'll store the URL if the platform supports it or handle as placeholder.
+            post.value[0].content += `\n\n[AI Image: ${imageUrl}]`;
+          }
+        }
+      }
+    }
+
     const postList = [];
     for (const post of body.posts) {
       const messages = (post.value || []).map((p) => p.content);

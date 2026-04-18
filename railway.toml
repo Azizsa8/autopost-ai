@@ -1,3 +1,17 @@
 [phases.setup]
     nixPkgs = ['nodejs', 'python3']
     aptPkgs = ['build-essential', 'libudev-dev']
+
+[phases.build]
+    cmds = ['pnpm install', 'pnpm build']
+
+[services.backend]
+    command = 'pnpm run start:prod:backend'
+    healthcheck = '/health'
+
+[services.frontend]
+    command = 'pnpm run start:prod:frontend'
+    healthcheck = '/'
+
+[services.orchestrator]
+    command = 'pnpm run start:prod:orchestrator'

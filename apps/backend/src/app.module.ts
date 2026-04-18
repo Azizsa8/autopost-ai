@@ -17,6 +17,8 @@ import { TemporalRegisterMissingSearchAttributesModule } from '@gitroom/nestjs-l
 import { InfiniteWorkflowRegisterModule } from '@gitroom/nestjs-libraries/temporal/infinite.workflow.register';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
+import { AiContentModule } from '@gitroom/nestjs-libraries/ai-content/ai-content.module';
+import { BrandVoiceModule } from '@gitroom/nestjs-libraries/brand-voice/brand-voice.module';
 
 @Global()
 @Module({
@@ -29,6 +31,8 @@ import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
     ThirdPartyModule,
     VideoModule,
     ChatModule,
+    AiContentModule,
+    BrandVoiceModule,
     getTemporalModule(false),
     TemporalRegisterMissingSearchAttributesModule,
     InfiniteWorkflowRegisterModule,

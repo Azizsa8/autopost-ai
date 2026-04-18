@@ -37,6 +37,9 @@ import { OAuthAppController } from '@gitroom/backend/api/routes/oauth-app.contro
 import { ApprovedAppsController } from '@gitroom/backend/api/routes/approved-apps.controller';
 import { OAuthController, OAuthAuthorizedController } from '@gitroom/backend/api/routes/oauth.controller';
 import { AnnouncementsController } from '@gitroom/backend/api/routes/announcements.controller';
+import { AiContentController } from '@gitroom/backend/ai-content/ai-content.controller';
+import { BrandVoiceController } from '@gitroom/backend/brand-voice/brand-voice.controller';
+import { PaymentsController } from '@gitroom/backend/api/routes/payments.controller';
 import { AuthProviderManager } from '@gitroom/backend/services/auth/providers/providers.manager';
 import { GithubProvider } from '@gitroom/backend/services/auth/providers/github.provider';
 import { GoogleProvider } from '@gitroom/backend/services/auth/providers/google.provider';
@@ -63,6 +66,9 @@ const authenticatedController = [
   ApprovedAppsController,
   OAuthAuthorizedController,
   AnnouncementsController,
+  AiContentController,
+  BrandVoiceController,
+  PaymentsController,
 ];
 @Module({
   imports: [UploadModule],

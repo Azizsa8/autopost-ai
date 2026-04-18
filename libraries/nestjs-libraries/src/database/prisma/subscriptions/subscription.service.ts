@@ -1,278 +1,75 @@
 import { Injectable } from '@nestjs/common';
 import { pricing } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/pricing';
-import { SubscriptionRepository } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.repository';
-import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
-import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
-import { Organization } from '@prisma/client';
+import { PrismaService } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
+import { MoyasarService } from '@gitroom/nestjs-libraries/services/moyasar.service';
 import dayjs from 'dayjs';
-import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 
 @Injectable()
 export class SubscriptionService {
   constructor(
-    private readonly _subscriptionRepository: SubscriptionRepository,
-    private readonly _integrationService: IntegrationService,
-    private readonly _organizationService: OrganizationService
+    private prisma: PrismaService,
+    private moyasarService: MoyasarService
   ) {}
 
-  getSubscriptionByOrganizationId(organizationId: string) {
-    return this._subscriptionRepository.getSubscriptionByOrganizationId(
-      organizationId
-    );
+  async getSubscriptionByOrganizationId(organizationId: string) {
+    return this.prisma.subscription.findUnique({
+      where: { organizationId },
+    });
   }
 
-  useCredit<T>(
-    organization: Organization,
-    type = 'ai_images',
-    func: () => Promise<T>
-  ): Promise<T> {
-    return this._subscriptionRepository.useCredit(organization, type, func);
-  }
+  async createCheckoutLink(organizationId: string, plan: string) {
+    const selectedPlan = pricing[plan];
+    if (!selectedPlan) throw new Error('Invalid plan');
 
-  getCode(code: string) {
-    return this._subscriptionRepository.getCode(code);
-  }
-
-  async deleteSubscription(customerId: string) {
-    await this.modifySubscription(
-      customerId,
-      pricing.FREE.channel || 0,
-      'FREE'
-    );
-    return this._subscriptionRepository.deleteSubscriptionByCustomerId(
-      customerId
-    );
-  }
-
-  updateCustomerId(organizationId: string, customerId: string) {
-    return this._subscriptionRepository.updateCustomerId(
-      organizationId,
-      customerId
-    );
-  }
-
-  async checkSubscription(organizationId: string, subscriptionId: string) {
-    return await this._subscriptionRepository.checkSubscription(
-      organizationId,
-      subscriptionId
-    );
-  }
-
-  async modifySubscriptionByOrg(
-    organizationId: string,
-    totalChannels: number,
-    billing: 'FREE' | 'STANDARD' | 'TEAM' | 'PRO' | 'ULTIMATE'
-  ) {
-    if (!organizationId) {
-      return false;
-    }
-
-    const getCurrentSubscription =
-      (await this._subscriptionRepository.getSubscriptionByOrgId(
-        organizationId
-      ))!;
-
-    const from = pricing[getCurrentSubscription?.subscriptionTier || 'FREE'];
-    const to = pricing[billing];
-
-    const currentTotalChannels = (
-      await this._integrationService.getIntegrationsList(organizationId)
-    ).filter((f) => !f.disabled);
-
-    if (currentTotalChannels.length > totalChannels) {
-      await this._integrationService.disableIntegrations(
+    const invoice = await this.moyasarService.createInvoice({
+      amount: selectedPlan.month_price * 100, // Halalas
+      currency: 'SAR',
+      description: `AutoPost AI - ${plan} plan`,
+      callbackUrl: `${process.env.FRONTEND_URL}/billing/callback`,
+      metadata: {
         organizationId,
-        currentTotalChannels.length - totalChannels
-      );
-    }
+        plan,
+      },
+    });
 
-    if (from.team_members && !to.team_members) {
-      await this._organizationService.disableOrEnableNonSuperAdminUsers(
-        organizationId,
-        true
-      );
-    }
-
-    if (!from.team_members && to.team_members) {
-      await this._organizationService.disableOrEnableNonSuperAdminUsers(
-        organizationId,
-        false
-      );
-    }
-
-    if (billing === 'FREE') {
-      await this._integrationService.changeActiveCron(organizationId);
-    }
-
-    return true;
+    return { checkoutUrl: invoice.url };
   }
 
-  async modifySubscription(
-    customerId: string,
-    totalChannels: number,
-    billing: 'FREE' | 'STANDARD' | 'TEAM' | 'PRO' | 'ULTIMATE'
-  ) {
-    if (!customerId) {
-      return false;
+  async handleMoyasarWebhook(payload: any) {
+    // Basic verification (in production, use Moyasar signature)
+    const { id, status, amount, metadata } = payload;
+    
+    if (status === 'paid' && metadata?.organizationId) {
+      const plan = metadata.plan;
+      const selectedPlan = pricing[plan];
+
+      await this.prisma.subscription.upsert({
+        where: { organizationId: metadata.organizationId },
+        update: {
+          plan,
+          status: 'active',
+          moyasarId: id,
+          currentPeriodEnd: dayjs().add(1, 'month').toDate(),
+          maxProfiles: selectedPlan.maxProfiles,
+          maxPostsPerDay: selectedPlan.maxPostsPerDay,
+        },
+        create: {
+          organizationId: metadata.organizationId,
+          plan,
+          status: 'active',
+          moyasarId: id,
+          currentPeriodEnd: dayjs().add(1, 'month').toDate(),
+          maxProfiles: selectedPlan.maxProfiles,
+          maxPostsPerDay: selectedPlan.maxPostsPerDay,
+        },
+      });
     }
-
-    const getOrgByCustomerId =
-      await this._subscriptionRepository.getOrganizationByCustomerId(
-        customerId
-      );
-
-    const getCurrentSubscription =
-      (await this._subscriptionRepository.getSubscriptionByCustomerId(
-        customerId
-      ))!;
-
-    if (
-      !getOrgByCustomerId ||
-      (getCurrentSubscription && getCurrentSubscription?.isLifetime)
-    ) {
-      return false;
-    }
-
-    const from = pricing[getCurrentSubscription?.subscriptionTier || 'FREE'];
-    const to = pricing[billing];
-
-    const currentTotalChannels = (
-      await this._integrationService.getIntegrationsList(
-        getOrgByCustomerId?.id!
-      )
-    ).filter((f) => !f.disabled);
-
-    if (currentTotalChannels.length > totalChannels) {
-      await this._integrationService.disableIntegrations(
-        getOrgByCustomerId?.id!,
-        currentTotalChannels.length - totalChannels
-      );
-    }
-
-    if (from.team_members && !to.team_members) {
-      await this._organizationService.disableOrEnableNonSuperAdminUsers(
-        getOrgByCustomerId?.id!,
-        true
-      );
-    }
-
-    if (!from.team_members && to.team_members) {
-      await this._organizationService.disableOrEnableNonSuperAdminUsers(
-        getOrgByCustomerId?.id!,
-        false
-      );
-    }
-
-    if (billing === 'FREE') {
-      await this._integrationService.changeActiveCron(getOrgByCustomerId?.id!);
-    }
-
-    return true;
   }
 
-  async createOrUpdateSubscription(
-    isTrailing: boolean,
-    identifier: string,
-    customerId: string,
-    totalChannels: number,
-    billing: 'STANDARD' | 'TEAM' | 'PRO' | 'ULTIMATE',
-    period: 'MONTHLY' | 'YEARLY',
-    cancelAt: number | null,
-    code?: string,
-    org?: string
-  ) {
-    if (!code) {
-      try {
-        const load = await this.modifySubscription(
-          customerId,
-          totalChannels,
-          billing
-        );
-        if (!load) {
-          return {};
-        }
-      } catch (e) {
-        return {};
-      }
-    }
-    return this._subscriptionRepository.createOrUpdateSubscription(
-      isTrailing,
-      identifier,
-      customerId,
-      totalChannels,
-      billing,
-      period,
-      cancelAt,
-      code,
-      org ? { id: org } : undefined
-    );
-  }
-
-  getSubscriptionByIdentifier(identifier: string) {
-    return this._subscriptionRepository.getSubscriptionByIdentifier(identifier);
-  }
-
-  async getSubscription(organizationId: string) {
-    return this._subscriptionRepository.getSubscription(organizationId);
-  }
-
-  async checkCredits(organization: Organization, checkType = 'ai_images') {
-    // @ts-ignore
-    const type = organization?.subscription?.subscriptionTier || 'FREE';
-
-    if (type === 'FREE') {
-      return { credits: 0 };
-    }
-
-    // @ts-ignore
-    let date = dayjs(organization.subscription.createdAt);
-    while (date.isBefore(dayjs())) {
-      date = date.add(1, 'month');
-    }
-
-    const checkFromMonth = date.subtract(1, 'month');
-    const imageGenerationCount =
-      checkType === 'ai_images'
-        ? pricing[type].image_generation_count
-        : pricing[type].generate_videos;
-
-    const totalUse = await this._subscriptionRepository.getCreditsFrom(
-      organization.id,
-      checkFromMonth,
-      checkType
-    );
-
-    return {
-      credits: imageGenerationCount - totalUse,
-    };
-  }
-
-  async lifeTime(orgId: string, identifier: string, subscription: any) {
-    return this.createOrUpdateSubscription(
-      false,
-      identifier,
-      identifier,
-      pricing[subscription].channel!,
-      subscription,
-      'YEARLY',
-      null,
-      identifier,
-      orgId
-    );
-  }
-
-  async addSubscription(orgId: string, userId: string, subscription: any) {
-    await this._subscriptionRepository.setCustomerId(orgId, userId);
-    return this.createOrUpdateSubscription(
-      false,
-      makeId(5),
-      userId,
-      pricing[subscription].channel!,
-      subscription,
-      'MONTHLY',
-      null,
-      undefined,
-      orgId
-    );
+  async cancelSubscription(organizationId: string) {
+    return this.prisma.subscription.update({
+      where: { organizationId },
+      data: { status: 'cancelled' },
+    });
   }
 }
