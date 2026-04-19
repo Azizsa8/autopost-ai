@@ -92,7 +92,7 @@ export class WhatsappProvider extends SocialAbstract implements SocialProvider {
         },
       ];
     } catch (error) {
-      throw new Error(`WhatsApp post failed: ${error.message}`);
+      throw new Error(`WhatsApp post failed: ${(error as any).message}`);
     }
   }
 

@@ -192,8 +192,8 @@ export class OAuthRepository {
           include: {
             subscription: {
               select: {
-                subscriptionTier: true,
-                totalChannels: true,
+                plan: true,
+                maxProfiles: true,
                 isLifetime: true,
               },
             },

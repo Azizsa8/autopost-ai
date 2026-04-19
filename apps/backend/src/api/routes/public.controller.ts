@@ -141,11 +141,11 @@ export class PublicController {
         return { success: false };
       }
 
-      const totalChannels = pricing[load.billing].channel || 0;
+      const totalProfiles = pricing[load.billing].maxProfiles || 0;
 
       await this._subscriptionService.modifySubscriptionByOrg(
         load.orgId,
-        totalChannels,
+        totalProfiles,
         load.billing
       );
 

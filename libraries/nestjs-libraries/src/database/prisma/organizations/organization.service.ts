@@ -95,13 +95,13 @@ export class OrganizationService {
 
   async deleteTeamMember(org: Organization, userId: string) {
     const userOrgs = await this._organizationRepository.getOrgsByUserId(userId);
-    const findOrgToDelete = userOrgs.find((orgUser) => orgUser.id === org.id);
+    const findOrgToDelete = userOrgs.find((orgUser) => orgUser.id === org.id) as any;
     if (!findOrgToDelete) {
       throw new Error('User is not part of this organization');
     }
 
     // @ts-ignore
-    const myRole = org.users[0].role;
+    const myRole = (org as any).users[0].role;
     const userRole = findOrgToDelete.users[0].role;
     const myLevel = myRole === 'USER' ? 0 : myRole === 'ADMIN' ? 1 : 2;
     const userLevel = userRole === 'USER' ? 0 : userRole === 'ADMIN' ? 1 : 2;

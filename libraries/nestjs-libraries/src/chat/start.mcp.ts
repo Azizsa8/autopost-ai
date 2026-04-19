@@ -25,7 +25,7 @@ export const startMcp = async (app: INestApplication) => {
 
   const resolveAuth = async (token: string) => {
     if (token.startsWith('pos_')) {
-      const authorization = await oauthService.getOrgByOAuthToken(token);
+      const authorization = (await oauthService.getOrgByOAuthToken(token)) as any;
       if (!authorization) return null;
       return authorization.organization;
     }

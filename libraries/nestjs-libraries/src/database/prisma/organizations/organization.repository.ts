@@ -1,5 +1,5 @@
 import { PrismaRepository } from '@gitroom/nestjs-libraries/database/prisma/prisma.service';
-import { Role, ShortLinkPreference, SubscriptionTier } from '@prisma/client';
+import { Role, ShortLinkPreference } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { AuthService } from '@gitroom/helpers/auth/auth.service';
 import { CreateOrgUserDto } from '@gitroom/nestjs-libraries/dtos/auth/create.org.user.dto';
@@ -25,10 +25,9 @@ export class OrganizationRepository {
         isTrailing: false,
         subscription: {
           create: {
-            totalChannels: 1000000,
-            subscriptionTier: 'ULTIMATE',
+            maxProfiles: 999999,
+            plan: 'ULTIMATE',
             isLifetime: true,
-            period: 'YEARLY',
           },
         },
         users: {
@@ -60,8 +59,8 @@ export class OrganizationRepository {
       include: {
         subscription: {
           select: {
-            subscriptionTier: true,
-            totalChannels: true,
+            plan: true,
+            maxProfiles: true,
             isLifetime: true,
           },
         },
@@ -92,8 +91,8 @@ export class OrganizationRepository {
             },
             subscription: {
               select: {
-                subscriptionTier: true,
-                totalChannels: true,
+                plan: true,
+                maxProfiles: true,
                 isLifetime: true,
               },
             },
@@ -185,8 +184,8 @@ export class OrganizationRepository {
         },
         subscription: {
           select: {
-            subscriptionTier: true,
-            totalChannels: true,
+            plan: true,
+            maxProfiles: true,
             isLifetime: true,
             createdAt: true,
           },
@@ -231,8 +230,7 @@ export class OrganizationRepository {
 
     if (
       process.env.STRIPE_PUBLISHABLE_KEY &&
-      checkForSubscription?.subscription?.subscriptionTier ===
-        SubscriptionTier.STANDARD
+      checkForSubscription?.subscription?.plan === 'STANDARD'
     ) {
       return false;
     }

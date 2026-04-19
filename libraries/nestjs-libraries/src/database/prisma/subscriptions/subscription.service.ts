@@ -72,4 +72,72 @@ export class SubscriptionService {
       data: { status: 'cancelled' },
     });
   }
+
+  async addSubscription(organizationId: string, userId: string, plan: string) {
+    const selectedPlan = pricing[plan];
+    if (!selectedPlan) throw new Error('Invalid plan');
+
+    return this.prisma.subscription.upsert({
+      where: { organizationId },
+      update: {
+        plan,
+        status: 'active',
+        currentPeriodEnd: dayjs().add(1, 'month').toDate(),
+        maxProfiles: selectedPlan.maxProfiles,
+        maxPostsPerDay: selectedPlan.maxPostsPerDay,
+      },
+      create: {
+        organizationId,
+        plan,
+        status: 'active',
+        currentPeriodEnd: dayjs().add(1, 'month').toDate(),
+        maxProfiles: selectedPlan.maxProfiles,
+        maxPostsPerDay: selectedPlan.maxPostsPerDay,
+      },
+    });
+  }
+
+  async checkCredits(org: any) {
+    return 1000; // Mock credits
+  }
+
+  async useCredit(org: any, type: string, func: () => Promise<any>) {
+    return func();
+  }
+
+  async getSubscription(organizationId: string) {
+    return this.getSubscriptionByOrganizationId(organizationId);
+  }
+
+  async modifySubscriptionByOrg(organizationId: string, totalProfiles: number, plan: string) {
+    return this.prisma.subscription.update({
+      where: { organizationId },
+      data: {
+        plan,
+        maxProfiles: totalProfiles,
+      },
+    });
+  }
+
+  async lifeTime(organizationId: string, make: boolean, plan: string) {
+    const selectedPlan = pricing[plan];
+    return this.prisma.subscription.upsert({
+      where: { organizationId },
+      update: {
+        plan,
+        status: 'active',
+        isLifetime: true,
+        maxProfiles: selectedPlan.maxProfiles,
+        maxPostsPerDay: selectedPlan.maxPostsPerDay,
+      },
+      create: {
+        organizationId,
+        plan,
+        status: 'active',
+        isLifetime: true,
+        maxProfiles: selectedPlan.maxProfiles,
+        maxPostsPerDay: selectedPlan.maxPostsPerDay,
+      },
+    });
+  }
 }

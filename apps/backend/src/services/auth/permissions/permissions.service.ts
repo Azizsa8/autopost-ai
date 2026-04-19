@@ -23,15 +23,15 @@ export class PermissionsService {
       await this._subscriptionService.getSubscriptionByOrganizationId(orgId);
 
     const tier =
-      subscription?.subscriptionTier ||
-      (!process.env.STRIPE_PUBLISHABLE_KEY ? 'PRO' : 'FREE');
+      (subscription?.plan?.toLowerCase() as any) ||
+      (!process.env.STRIPE_PUBLISHABLE_KEY ? 'starter' : 'starter');
 
-    const { channel, ...all } = pricing[tier];
+    const { maxProfiles, ...all } = pricing[tier] || pricing.starter;
     return {
       subscription,
       options: {
         ...all,
-        ...{ channel: tier === 'FREE' ? channel : -10 },
+        ...{ maxProfiles: tier === 'starter' ? maxProfiles : 999999 },
       },
     };
   }
@@ -85,8 +85,8 @@ export class PermissionsService {
         ).filter((f) => !f.refreshNeeded).length;
 
         if (
-          (options.channel && options.channel > totalChannels) ||
-          (subscription?.totalChannels || 0) > totalChannels
+          (options.maxProfiles && options.maxProfiles > totalChannels) ||
+          (subscription?.maxProfiles || 0) > totalChannels
         ) {
           can(action, section);
           continue;
@@ -115,7 +115,7 @@ export class PermissionsService {
           checkFrom.toDate()
         );
 
-        if (count < options.posts_per_month) {
+        if (count < options.maxPostsPerDay) {
           can(action, section);
           continue;
         }

@@ -49,9 +49,9 @@ export class AuthMiddleware implements NestMiddleware {
 
       const impersonate = req.cookies.impersonate || req.headers.impersonate;
       if (user?.isSuperAdmin && impersonate) {
-        const loadImpersonate = await this._organizationService.getUserOrg(
+        const loadImpersonate = (await this._organizationService.getUserOrg(
           impersonate
-        );
+        )) as any;
 
         if (loadImpersonate) {
           user = loadImpersonate.user;
@@ -77,7 +77,7 @@ export class AuthMiddleware implements NestMiddleware {
 
       delete user.password;
       const organization = (
-        await this._organizationService.getOrgsByUserId(user.id)
+        (await this._organizationService.getOrgsByUserId(user.id)) as any[]
       ).filter((f) => !f.users[0].disabled);
       const setOrg =
         organization.find((org) => org.id === orgHeader) || organization[0];

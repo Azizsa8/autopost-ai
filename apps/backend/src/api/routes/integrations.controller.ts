@@ -57,7 +57,7 @@ export class IntegrationsController {
           customFields: integration.customFields ? integration.customFields : undefined,
         };
       }),
-      article: this._integrationManager.getAllowedArticlesIntegrations().map((identifier) => {
+      article: this._integrationManager.getAllowedSocialsIntegrations().map((identifier) => {
         const integration = this._integrationManager.getSocialIntegration(identifier);
         return {
           identifier,

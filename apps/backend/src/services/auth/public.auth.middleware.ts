@@ -19,7 +19,7 @@ export class PublicAuthMiddleware implements NestMiddleware {
     }
     try {
       if (auth.startsWith('pos_')) {
-        const authorization = await this._oauthService.getOrgByOAuthToken(auth);
+        const authorization = (await this._oauthService.getOrgByOAuthToken(auth)) as any;
         if (!authorization) {
           res
             .status(HttpStatus.UNAUTHORIZED)
@@ -27,7 +27,7 @@ export class PublicAuthMiddleware implements NestMiddleware {
           return;
         }
 
-        const org = authorization.organization;
+        const org = authorization.organization as any;
         if (!!process.env.STRIPE_SECRET_KEY && !org.subscription) {
           res
             .status(HttpStatus.UNAUTHORIZED)
@@ -38,7 +38,7 @@ export class PublicAuthMiddleware implements NestMiddleware {
         // @ts-ignore
         req.org = { ...org, users: [{ users: { role: 'SUPERADMIN' } }] };
       } else {
-        const org = await this._organizationService.getOrgByApiKey(auth);
+        const org = (await this._organizationService.getOrgByApiKey(auth)) as any;
         if (!org) {
           res
             .status(HttpStatus.UNAUTHORIZED)
