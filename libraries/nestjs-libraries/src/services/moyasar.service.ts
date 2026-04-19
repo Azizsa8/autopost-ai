@@ -8,7 +8,7 @@ export class MoyasarService {
   private readonly baseUrl = 'https://api.moyasar.com/v1';
 
   async createInvoice(params: {
-    amount: number; // in Halalas (1 SAR = 100 Halalas)
+    amount: number;
     currency: string;
     description: string;
     callbackUrl: string;
@@ -32,7 +32,7 @@ export class MoyasarService {
         }
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Moyasar Invoice Error: ${error.message}`);
       throw error;
     }
@@ -47,7 +47,7 @@ export class MoyasarService {
         },
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Moyasar Fetch Payment Error: ${error.message}`);
       throw error;
     }

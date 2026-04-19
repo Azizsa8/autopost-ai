@@ -18,63 +18,41 @@ export class SubscriptionRepository {
 
   getUserAccount(userId: string) {
     return this._user.model.user.findFirst({
-      where: {
-        id: userId,
-      },
-      select: {
-        account: true,
-        connectedAccount: true,
-      },
+      where: { id: userId },
+      select: { account: true, connectedAccount: true },
     });
   }
 
   getCode(code: string) {
     return this._usedCodes.model.usedCodes.findFirst({
-      where: {
-        code,
-      },
+      where: { code },
     });
   }
 
   updateAccount(userId: string, account: string) {
     return this._user.model.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        account,
-      },
+      where: { id: userId },
+      data: { account },
     });
   }
 
   getSubscriptionByOrganizationId(organizationId: string) {
     return this._subscription.model.subscription.findFirst({
-      where: {
-        organizationId,
-        deletedAt: null,
-      },
+      where: { organizationId },
     });
   }
 
   updateConnectedStatus(account: string, accountCharges: boolean) {
     return this._user.model.user.updateMany({
-      where: {
-        account,
-      },
-      data: {
-        connectedAccount: accountCharges,
-      },
+      where: { account },
+      data: { connectedAccount: accountCharges },
     });
   }
 
   getCustomerIdByOrgId(organizationId: string) {
     return this._organization.model.organization.findFirst({
-      where: {
-        id: organizationId,
-      },
-      select: {
-        paymentId: true,
-      },
+      where: { id: organizationId },
+      select: { paymentId: true },
     });
   }
 
@@ -82,8 +60,7 @@ export class SubscriptionRepository {
     return this._subscription.model.subscription.findFirst({
       where: {
         organizationId,
-        identifier: subscriptionId,
-        deletedAt: null,
+        moyasarId: subscriptionId,
       },
     });
   }
@@ -100,38 +77,28 @@ export class SubscriptionRepository {
 
   updateCustomerId(organizationId: string, customerId: string) {
     return this._organization.model.organization.update({
-      where: {
-        id: organizationId,
-      },
-      data: {
-        paymentId: customerId,
-      },
+      where: { id: organizationId },
+      data: { paymentId: customerId },
     });
   }
 
   async getSubscriptionByOrgId(orgId: string) {
     return this._subscription.model.subscription.findFirst({
-      where: {
-        organizationId: orgId,
-      },
+      where: { organizationId: orgId },
     });
   }
 
   async getSubscriptionByCustomerId(customerId: string) {
     return this._subscription.model.subscription.findFirst({
       where: {
-        organization: {
-          paymentId: customerId,
-        },
+        organization: { paymentId: customerId },
       },
     });
   }
 
   async getOrganizationByCustomerId(customerId: string) {
     return this._organization.model.organization.findFirst({
-      where: {
-        paymentId: customerId,
-      },
+      where: { paymentId: customerId },
     });
   }
 
@@ -140,8 +107,8 @@ export class SubscriptionRepository {
     identifier: string,
     customerId: string,
     totalChannels: number,
-    billing: 'STANDARD' | 'TEAM' | 'PRO' | 'ULTIMATE',
-    period: 'MONTHLY' | 'YEARLY',
+    billing: string,
+    period: string,
     cancelAt: number | null,
     code?: string,
     org?: { id: string }
@@ -149,80 +116,60 @@ export class SubscriptionRepository {
     const findOrg =
       org || (await this.getOrganizationByCustomerId(customerId))!;
 
-    if (!findOrg) {
-      return;
-    }
+    if (!findOrg) return;
+
+    const planLimits: Record<string, { maxProfiles: number; maxPostsPerDay: number }> = {
+      STANDARD: { maxProfiles: 2, maxPostsPerDay: 1 },
+      TEAM:     { maxProfiles: 5, maxPostsPerDay: 3 },
+      PRO:      { maxProfiles: 15, maxPostsPerDay: 999 },
+      ULTIMATE: { maxProfiles: 999, maxPostsPerDay: 999 },
+    };
+
+    const limits = planLimits[billing] || { maxProfiles: 2, maxPostsPerDay: 1 };
 
     await this._subscription.model.subscription.upsert({
-      where: {
-        organizationId: findOrg.id,
-        ...(!code
-          ? {
-              organization: {
-                paymentId: customerId,
-              },
-            }
-          : {}),
-      },
+      where: { organizationId: findOrg.id },
       update: {
-        subscriptionTier: billing,
-        totalChannels,
-        period,
-        identifier,
-        isLifetime: !!code,
-        cancelAt: cancelAt ? new Date(cancelAt * 1000) : null,
-        deletedAt: null,
+        plan: billing,
+        status: 'active',
+        moyasarId: identifier,
+        maxProfiles: limits.maxProfiles,
+        maxPostsPerDay: limits.maxPostsPerDay,
+        currentPeriodEnd: cancelAt ? new Date(cancelAt * 1000) : null,
       },
       create: {
         organizationId: findOrg.id,
-        subscriptionTier: billing,
-        isLifetime: !!code,
-        totalChannels,
-        period,
-        cancelAt: cancelAt ? new Date(cancelAt * 1000) : null,
-        identifier,
-        deletedAt: null,
+        plan: billing,
+        status: 'active',
+        moyasarId: identifier,
+        maxProfiles: limits.maxProfiles,
+        maxPostsPerDay: limits.maxPostsPerDay,
+        currentPeriodEnd: cancelAt ? new Date(cancelAt * 1000) : null,
       },
     });
 
     await this._organization.model.organization.update({
-      where: {
-        id: findOrg.id,
-      },
-      data: {
-        isTrailing,
-        allowTrial: false,
-      },
+      where: { id: findOrg.id },
+      data: { isTrailing, allowTrial: false },
     });
 
     if (code) {
       await this._usedCodes.model.usedCodes.create({
-        data: {
-          code,
-          orgId: findOrg.id,
-        },
+        data: { code, orgId: findOrg.id },
       });
     }
   }
 
   getSubscriptionByIdentifier(identifier: string) {
     return this._subscription.model.subscription.findFirst({
-      where: {
-        identifier,
-        deletedAt: null,
-      },
-      include: {
-        organization: true,
-      },
+      where: { moyasarId: identifier },
+      include: { organization: true },
     });
   }
 
   getSubscription(organizationId: string) {
     return this._subscription.model.subscription.findFirst({
-      where: {
-        organizationId,
-        deletedAt: null,
-      },
+      where: { organizationId },
     });
   }
 
@@ -236,13 +183,9 @@ export class SubscriptionRepository {
       where: {
         organizationId,
         type,
-        createdAt: {
-          gte: from.toDate(),
-        },
+        createdAt: { gte: from.toDate() },
       },
-      _sum: {
-        credits: true,
-      },
+      _sum: { credits: true },
     });
 
     return load?.[0]?._sum?.credits || 0;
@@ -254,20 +197,14 @@ export class SubscriptionRepository {
     func: () => Promise<T>
   ) {
     const data = await this._credits.model.credits.create({
-      data: {
-        organizationId: org.id,
-        credits: 1,
-        type,
-      },
+      data: { organizationId: org.id, credits: 1, type },
     });
 
     try {
       return await func();
     } catch (err) {
       await this._credits.model.credits.delete({
-        where: {
-          id: data.id,
-        },
+        where: { id: data.id },
       });
       throw err;
     }
@@ -275,12 +212,8 @@ export class SubscriptionRepository {
 
   setCustomerId(orgId: string, customerId: string) {
     return this._organization.model.organization.update({
-      where: {
-        id: orgId,
-      },
-      data: {
-        paymentId: customerId,
-      },
+      where: { id: orgId },
+      data: { paymentId: customerId },
     });
   }
 }
