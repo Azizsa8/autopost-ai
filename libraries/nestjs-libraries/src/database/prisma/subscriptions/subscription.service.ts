@@ -97,8 +97,8 @@ export class SubscriptionService {
     });
   }
 
-  async checkCredits(org: any) {
-    return 1000; // Mock credits
+  async checkCredits(org: any, type?: string) {
+    return { credits: 1000 };
   }
 
   async useCredit(org: any, type: string, func: () => Promise<any>) {

@@ -290,6 +290,9 @@ model Subscription {
   currentPeriodEnd  DateTime?
   maxProfiles       Int       @default(2)
   maxPostsPerDay    Int       @default(1)
+  isLifetime        Boolean   @default(false)
+  totalChannels     Int       @default(5)
+  subscriptionTier  String?
   trialEndsAt       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
