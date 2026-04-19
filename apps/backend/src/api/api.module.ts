@@ -3,8 +3,6 @@ import { AuthController } from '@gitroom/backend/api/routes/auth.controller';
 import { AuthService } from '@gitroom/backend/services/auth/auth.service';
 import { UsersController } from '@gitroom/backend/api/routes/users.controller';
 import { AuthMiddleware } from '@gitroom/backend/services/auth/auth.middleware';
-import { StripeController } from '@gitroom/backend/api/routes/stripe.controller';
-import { StripeService } from '@gitroom/nestjs-libraries/services/stripe.service';
 import { AnalyticsController } from '@gitroom/backend/api/routes/analytics.controller';
 import { PoliciesGuard } from '@gitroom/backend/services/auth/permissions/permissions.guard';
 import { PermissionsService } from '@gitroom/backend/services/auth/permissions/permissions.service';
@@ -74,7 +72,6 @@ const authenticatedController = [
   imports: [UploadModule],
   controllers: [
     RootController,
-    StripeController,
     AuthController,
     PublicController,
     MonitorController,
@@ -85,7 +82,6 @@ const authenticatedController = [
   ],
   providers: [
     AuthService,
-    StripeService,
     OpenaiService,
     ExtractContentService,
     AuthMiddleware,
