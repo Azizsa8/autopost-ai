@@ -9,7 +9,7 @@
     "spec": false
   },
   "compilerOptions": {
-    "builder": "tsc",
+    "builder": "swc",
     "typeCheck": false,
     "manualRestart": true,
     "tsConfigPath": "./tsconfig.build.json",
