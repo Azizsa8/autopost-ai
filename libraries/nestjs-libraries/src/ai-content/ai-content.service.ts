@@ -20,7 +20,7 @@ export class AiContentService {
           },
         });
         return response.data;
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(`NVIDIA API Error (attempt ${i + 1}): ${error.message}`);
         if (i === retries - 1) throw error;
         await new Promise((resolve) => setTimeout(resolve, Math.pow(2, i) * 1000));
@@ -81,7 +81,7 @@ Format result as JSON: { "captionAr": "...", "captionEn": "...", "hashtags": [".
       });
 
       return content;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Caption generation failed: ${error.message}`);
       await this.logGeneration({
         organizationId,
@@ -123,7 +123,7 @@ Format result as JSON: { "captionAr": "...", "captionEn": "...", "hashtags": [".
       });
 
       return result.data[0].url || result.data[0].b64_json;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Image generation failed: ${error.message}`);
       await this.logGeneration({
         organizationId,
@@ -157,7 +157,7 @@ Format result as JSON: { "captionAr": "...", "captionEn": "...", "hashtags": [".
       });
 
       return { translatedText: result.choices[0].message.content };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Translation failed: ${error.message}`);
       return { translatedText: '' };
     }
@@ -186,7 +186,7 @@ Format result as JSON: { "captionAr": "...", "captionEn": "...", "hashtags": [".
       });
 
       return content;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Moderation failed: ${error.message}`);
       return { safe: true };
     }
@@ -206,7 +206,7 @@ Format result as JSON: { "captionAr": "...", "captionEn": "...", "hashtags": [".
           errorMessage: log.errorMessage,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Logging generation failed: ${error.message}`);
     }
   }
